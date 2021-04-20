@@ -1,3 +1,8 @@
+# setup
+```
+python3 -m pip install asn1
+python3 -m pip install pycryptodomex
+```
 # pysstool
 python sstool
 ```
@@ -12,4 +17,11 @@ Encrypted Symkey[256]=1dfea128bba1e2d571f837822ef85b9018d3619d1ebd6d8c3980745615
 Nonce[12]=a7e2a6627e56f17d005c44a0
 CiperText[10]=9f55020013730fdbc2c4
 AuthTag[16]=cf8deab070154af15dadeca2753f1442
+```
+
+# test RSA and AES
+```
+>python3 testencrypt.py 
+plaintext 'HelloWorld', decrypted data 'HelloWorld'
+decrypted message 'HelloWorld'
 ```
