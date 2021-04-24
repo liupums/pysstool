@@ -25,3 +25,11 @@ AuthTag[16]=cf8deab070154af15dadeca2753f1442
 plaintext 'HelloWorld', decrypted data 'HelloWorld'
 decrypted message 'HelloWorld'
 ```
+# parse builddropmanifest.apsignature.csv
+```
+signature
+#signature: xxxxx  \r\n
+manifest
+#fields xxxx
+
+```
