@@ -33,3 +33,24 @@ manifest
 #fields xxxx
 
 ```
+# parse catalog file
+```
+efoleyz440:python-test puliu$ python3 read_catalog.py 
+-->parse_catalog
+-->Match_SignedData
+version=1
+-->Match_CertTrustList
+-->Match_Catalog_List
+Catalog MemberInfo2
+Catalog NameValue
+hash=b'BC2A92691D8340254D2DEDCF3B8A716C9FD0C861', filename=buildDropManifest.raw.csv
+Catalog MemberInfo2
+Catalog SPC INDIRECT DATA
+Catalog NameValue
+hash=b'E5DA760720BF04629EA1FFEA777A46ABEDB7273A32F558849D630C72F5327103', filename=buildDropManifest.raw.csv
+<--Match_Catalog_List
+<--Match_CertTrustList
+<--Match_SignedData
+<--parse_catalog
+
+```
