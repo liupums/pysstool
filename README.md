@@ -55,3 +55,27 @@ hash=b'E5DA760720BF04629EA1FFEA777A46ABEDB7273A32F558849D630C72F5327103', filena
 <--parse_catalog
 
 ```
+# use the pyasn1
+```
+# https://tools.ietf.org/html/rfc2315
+# 9.1 SignedData Type
+#   SignedData ::= SEQUENCE {
+#      version Version,
+#      digestAlgorithms DigestAlgorithmIdentifiers,
+#      contentInfo ContentInfo,
+#      certificates
+#         [0] IMPLICIT ExtendedCertificatesAndCertificates
+#           OPTIONAL,
+#      crls
+#        [1] IMPLICIT CertificateRevocationLists OPTIONAL,
+#      signerInfos SignerInfos }
+# https://signify.readthedocs.io/en/latest/pkcs7.html
+
+from pyasn1.codec.der.decoder import decode as der_decoder
+from pyasn1_modules import rfc2315, rfc5652
+import sys
+with open('manifest.cat', 'rb') as input_file:
+    input_data = input_file.read()
+    x, _ = der_decoder(input_data, rfc2315.ContentInfo())
+    print(x.prettyPrint())
+```
