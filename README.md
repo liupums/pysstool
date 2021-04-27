@@ -70,6 +70,7 @@ hash=b'E5DA760720BF04629EA1FFEA777A46ABEDB7273A32F558849D630C72F5327103', filena
 #        [1] IMPLICIT CertificateRevocationLists OPTIONAL,
 #      signerInfos SignerInfos }
 # https://signify.readthedocs.io/en/latest/pkcs7.html
+# https://github.com/etingof/pyasn1-modules
 
 from pyasn1.codec.der.decoder import decode as der_decoder
 from pyasn1_modules import rfc2315, rfc5652
@@ -78,4 +79,10 @@ with open('manifest.cat', 'rb') as input_file:
     input_data = input_file.read()
     x, _ = der_decoder(input_data, rfc2315.ContentInfo())
     print(x.prettyPrint())
+```
+ouput
+```
+ContentInfo:
+ contentType=1.2.840.113549.1.7.2
+ content=0x3082286a020101310f300d06096086480165030402010500308201c406092b0601040182370a01a08201b5308201b1300c060a2b0601040182370c010104103464c10b0a87674cb5e57619ff64d83e170d3231303432323131323035335a300e060a2b0601040182370c010305003082016e3081
 ```
