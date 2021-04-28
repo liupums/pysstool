@@ -78,11 +78,15 @@ import sys
 with open('manifest.cat', 'rb') as input_file:
     input_data = input_file.read()
     x, _ = der_decoder(input_data, rfc2315.ContentInfo())
-    print(x.prettyPrint())
+    data, _ = der_decoder(x['content'], rfc2315.SignedData())
+    with open('manifest.out', 'w') as f:
+        f.write(data.prettyPrint())
 ```
 ouput
 ```
 ContentInfo:
  contentType=1.2.840.113549.1.7.2
  content=0x3082286a020101310f300d06096086480165030402010500308201c406092b0601040182370a01a08201b5308201b1300c060a2b0601040182370c010104103464c10b0a87674cb5e57619ff64d83e170d3231303432323131323035335a300e060a2b0601040182370c010305003082016e3081
+ 
+the result is in manifest.out
 ```
