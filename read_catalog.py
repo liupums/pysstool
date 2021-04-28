@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from builtins import open, bytes, str
+from cryptography.hazmat.primitives.serialization import pkcs7
 import sys
 import base64
 import binascii
 
 import asn1
 import optparse
+from OpenSSL import crypto
+import Utils
 
 ctl_version = 0
 ctl_sequenceNumber = 0
@@ -42,11 +45,12 @@ CAT_MEMBERINFO_OBJID = "Catalog MemberInfo"
 CAT_MEMBERINFO2_OBJID = "Catalog MemberInfo2"
 SPC_INDIRECT_DATA_OBJID = "Catalog SPC INDIRECT DATA"
 SPC_CAB_DATA_OBJID = "Catalog CAB DATA"
+szOID_RFC3161_counterSign = "Timestamping signature (Ms-CounterSign)"
 
 TRACE = True
 object_id_to_string_map = {
-    "1.2.840.113549.1.7.2" : SIGNED_DATA,
-    "1.3.6.1.4.1.311.10.1" : CTL_LIST,
+    "1.2.840.113549.1.7.2"   : SIGNED_DATA,
+    "1.3.6.1.4.1.311.10.1"   : CTL_LIST,
     "1.3.6.1.4.1.311.12.1.1" : CAT_LIST,
     "1.3.6.1.4.1.311.12.1.2" : CAT_LIST_MEMBER,
     "1.3.6.1.4.1.311.12.1.3" : CAT_LIST_MEMBER_V2,
@@ -55,8 +59,9 @@ object_id_to_string_map = {
     "1.3.6.1.4.1.311.12.2.3" : CAT_MEMBERINFO2_OBJID,
     "1.3.6.1.4.1.311.2.1.4"  : SPC_INDIRECT_DATA_OBJID,
     "1.3.6.1.4.1.311.2.1.25" : SPC_CAB_DATA_OBJID,
-    "1.3.14.3.2.26" :  SHA1_ALGO,
-    "2.5.4.3": COMMON_NAME
+    "1.3.14.3.2.26"          : SHA1_ALGO,
+    "2.5.4.3"                : COMMON_NAME,
+    "1.3.6.1.4.1.311.3.3.1"  : szOID_RFC3161_counterSign
 }
 
 def assert_oid(oid, expected):
@@ -315,6 +320,81 @@ def Match_CertTrustList(input_stream):
         input_stream.leave()        
     trace("<--Match_CertTrustList")
 
+def Match_SignerCert(input_stream):
+    if input_stream.eof():
+        return
+    trace("-->Match_SignerCert")
+    tag = input_stream.peek()
+    if tag.typ == asn1.Types.Constructed: # "0xA0, aka [0]"
+        input_stream.enter()
+        # manually parse the certificates
+        tag = input_stream.peek()
+        while tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SEQUENCE':
+            certLen = input_stream._read_length()
+            value = input_stream._read_bytes(certLen)
+            output_stream = asn1.Encoder()
+            output_stream.start()
+            output_stream.write(value, tag.nr, tag.typ, tag.cls) # we have to add back the tag and length
+            test = output_stream.output()
+            leaf_cert = crypto.load_certificate(crypto.FILETYPE_ASN1, test)
+            Utils.print_cert_info(leaf_cert.to_cryptography())
+            if not input_stream.eof():
+                tag = input_stream._read_tag()
+            else:
+                break
+        input_stream.leave()
+    trace("<--Match_SignerCert")
+
+def Get_CounterSignInfo(input_stream):
+    if input_stream.eof():
+        return
+    trace("-->Get Counter Sign Info")
+    trace("<-->Get Counter Sign Info")
+    tag = input_stream.peek()
+    if tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SEQUENCE':
+        input_stream.enter()
+        oid = Get_OID(input_stream)
+        assert_oid(oid, szOID_RFC3161_counterSign)
+        input_stream.leave()
+
+def Match_CounterSign(input_stream):
+    if input_stream.eof():
+        return
+    trace("-->Counter Sign")
+    tag = input_stream.peek()
+    if tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SET':
+        input_stream.enter()
+        tag = input_stream.peek()
+        if tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SEQUENCE':
+            input_stream.enter()
+            version = Get_INT(input_stream)
+            trace("version=%d"%version)
+            tag = input_stream.peek()
+            if tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SEQUENCE':
+                input_stream.enter()
+                trace("ignored AME CS CA 01")
+                input_stream.leave()
+            oid = Get_OID_SEQUENCE(input_stream)
+            trace(oid)
+            tag = input_stream.peek()
+            if tag.typ == asn1.Types.Constructed: # [0] 0xA0
+                input_stream.enter()
+                trace("ignored message digest etc")
+                input_stream.leave()
+            tag = input_stream.peek()
+            if tag.typ == asn1.Types.Constructed and tag_id_to_string(tag.nr) == 'SEQUENCE':
+                input_stream.enter()
+                trace("ignored PKCS#1")
+                input_stream.leave()
+            signature = Get_OCTET_STR(input_stream)
+            trace(signature)
+            if tag.typ == asn1.Types.Constructed: # [1] 0xA1
+                input_stream.enter()
+                Get_CounterSignInfo(input_stream)
+                input_stream.leave()
+        input_stream.leave()
+    trace("<--Counter Sign")
+
 def Match_SignedData(input_stream):
     if input_stream.eof():
         return
@@ -325,6 +405,8 @@ def Match_SignedData(input_stream):
         version = Get_INT(input_stream)
         trace("version=%d"%version)
         Match_CertTrustList(input_stream)
+        Match_SignerCert(input_stream)
+        Match_CounterSign(input_stream)
         input_stream.leave()
     trace("<--Match_SignedData")
 
